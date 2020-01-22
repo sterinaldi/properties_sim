@@ -308,9 +308,13 @@ class ranking(cpnest.model.Model):
 
 if __name__ == '__main__':
 
-    positions = 'posterior_samples.json'
+    # Event selection
+    
+    # positions = 'posterior_samples.json'
     # positions = 'GW170817_GWTC-1.hdf5'
     # positions = 'posterior_samples_170817.dat'
+
+    # To be fixed according to the expected luminosity distance
     z_bounds = [0.02,0.08]
     omega = lal.CreateCosmologicalParameters(0.7,0.3,0.7,-1.,0.,0.)
     M = ranking(omega, z_bounds)
