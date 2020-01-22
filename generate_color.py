@@ -39,7 +39,7 @@ if __name__ == '__main__':
     mag_others = np.zeros(len(data)-nev)
     # Draw other galaxies luminosity (Schechter function) with Von Neumann's accept-reject sampling method
     mag_bounds = [-17, -24]
-    c = abs(mag_bounds[1]-mag_bounds[0])*Schechter(mag_bounds[0], Mstar, alpha)
+    c = Schechter(mag_bounds[0], Mstar, alpha)
     for i in range(len(mag_others)):
         flag = True
         while(flag):
