@@ -30,7 +30,7 @@ if __name__ == '__main__':
     Mstar   = -20.47
 
     # Gaussian Parameters
-    m_mean  = 20.
+    m_mean  = -20.
     m_sigma = 0.5
 
     # Draw nev luminosities for hosts (gaussian distributed)
