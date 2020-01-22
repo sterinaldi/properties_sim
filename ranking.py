@@ -265,15 +265,14 @@ class ranking(cpnest.model.Model):
     def log_likelihood(self, x):
         logL = 0.
         zgw = x['zgw']
-        # Manca da correggere per il moto proprio (assunto, per ora, gaussiano con errore del 10%)
-        # logL = logsumexp([Gaussexp(lal.LuminosityDistance(self.omega, zgi), DL, dDL)+Gaussexp(zgw, zgi, zgi/10.0)+Gaussexp(np.radians(rai), GW.ra.rad, 2.0)+Gaussexp(np.pi/2.0-np.radians(di), GW.dec.rad, 2.0) for zgi,rai,di in zip(self.catalog['z'],self.catalog['RAJ2000'],self.catalog['DEJ2000'])])
+        # Proper motion is here assumed to be gaussian (sigma ~10%)
         Lh = np.array([gaussian(zgw, zgi, zgi/10.0)*M.pLD(lal.LuminosityDistance(self.omega, zgi))*np.exp(M.p_pos.score_samples([[np.deg2rad(rai),np.deg2rad(di)]])[0])for zgi,rai,di in zip(self.catalog['z'],self.catalog['RAJ2000'],self.catalog['DEJ2000'])])
         logL = np.log(Lh.sum())
         return logL
 
     def run(self, file, show_output = False, run_sampling = True):
 
-        # calcolo posteriors GW
+        # posteriors GW calculation
         samples = get_samples(file = file)
         self.pLD = gaussian_kde(samples['luminosity_distance'])
         self.p_pos = pos_posterior(samples['ra'],samples['dec'], number = 1)
@@ -282,21 +281,22 @@ class ranking(cpnest.model.Model):
         for ra, dec in zip(self.catalog['RAJ2000'], self.catalog['DEJ2000']):
             probs.append(np.exp(self.p_pos.score_samples([[np.deg2rad(ra),np.deg2rad(dec)]]))[0]) # si riesce ad ottimizzare?
         self.catalog['ppos'] = np.array(probs)
-        # Levo le galassie troppo fuori dal posterior
-        self.catalog = self.catalog[self.catalog['ppos'] > 0.01] # empirico!
-        # Levo le galassie fuori dal range di distanza
+        # Dropping galaxies outside the confident volume
+        # Position
+        self.catalog = self.catalog[self.catalog['ppos'] > 0.01] # empirical!
+        # Distance
         self.dropgal()
         # run
         job = cpnest.CPNest(self, verbose=1, nthreads=4, nlive=1000, maxmcmc=100)
         if run_sampling:
             job.run()
             posteriors = job.get_posterior_samples(filename = 'posterior.dat')
-        # Calcolo posterior su z
+        # z posteriors calculation
         posteriors = np.genfromtxt('posterior_backup.dat', names = True)
         just_z = [post[0] for post in posteriors]
         self.pdfz = gaussian_kde(just_z)
 
-        # Calcolo probabilità e ordino le galassie
+        # Probability calculation and galaxy sorting
         prob = self.catalog['z'].apply(self.pdfz)
         prob = prob/prob.max()
         self.catalog['p'] = prob
