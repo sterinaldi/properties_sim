@@ -17,7 +17,7 @@ def Schechter(M, Ms, alpha):
     Schechter function
     '''
     tmp = 10**(-0.4*(M-Ms))
-    return tmp**(alpha+1.0)*np.exp(-tmp)
+    return 0.4*np.log(10)*tmp**(alpha+1.0)*np.exp(-tmp)
 
 if __name__ == '__main__':
 
@@ -45,7 +45,7 @@ if __name__ == '__main__':
         while(flag):
             temp_mag = np.random.uniform(mag_bounds[1],mag_bounds[0])
             att      = np.random.uniform(0, c)
-            bound    = Schechter(mag_bounds[0], Mstar, alpha)
+            bound    = Schechter(temp_mag, Mstar, alpha)
             if(att < bound):
                 mag_others[i] = temp_mag
                 flag = False
