@@ -94,7 +94,6 @@ def pos_posterior(ra_s, dec_s, number = 2):
     samples = []
     for x,y in zip(ra_s, dec_s):
         samples.append(np.array([x,y]))
-    #func.mean_init = [[0.23,-0.44],[0.4,-0.55]]
     func.fit_predict(samples)
     return func
 
@@ -165,16 +164,6 @@ class ranking(cpnest.model.Model):
         plt.ylabel('$p(z)$')
         plt.savefig('pdfz.pdf')
 
-    def get_names(self):
-        names = []
-        for ra, dec in zip(self.catalog['RAJ2000'], self.catalog['DEJ2000']):
-            table = Simbad.query_region(SkyCoord(ra*u.deg,dec*u.deg))
-            if table is None:
-                names.append('Not provided')
-            else:
-                names.append(table[0][0].decode('utf-8'))
-        self.catalog['names'] = names
-
     def log_prior(self,x):
         if not(np.isfinite(super(ranking, self).log_prior(x))):
             return -np.inf
@@ -184,7 +173,7 @@ class ranking(cpnest.model.Model):
         logL = 0.
         zgw = x['zgw']
         # Proper motion is here assumed to be gaussian (sigma ~10%)
-        Lh = np.array([gaussian(zgw, zgi, zgi/10.0)*M.pLD(lal.LuminosityDistance(self.omega, zgi))*np.exp(M.p_pos.score_samples([[np.deg2rad(rai),np.deg2rad(di)]])[0])for zgi,rai,di in zip(self.catalog['z'],self.catalog['RAJ2000'],self.catalog['DEJ2000'])])
+        Lh = np.array([gaussian(zgw, zgi, zgi/10.0)*M.pLD(lal.LuminosityDistance(self.omega, zgi))*np.exp(M.p_pos.score_samples([[np.deg2rad(rai),np.deg2rad(di)]])[0])for zgi,rai,di in zip(self.catalog['z'],self.catalog['RA'],self.catalog['Dec'])])
         logL = np.log(Lh.sum())
         return logL
 
@@ -218,7 +207,6 @@ class ranking(cpnest.model.Model):
         prob = prob/prob.max()
         self.catalog['p'] = prob
         self.catalog = self.catalog.sort_values('p', ascending = False)
-        # self.get_names()
         self.catalog.to_csv('rank'+str(id)+'.txt', header=True, index=None, sep='&', mode='w')
         if show_output:
             self.plot_outputs()
