@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-
-
 import json
 import h5py
 from os.path import splitext
@@ -115,23 +113,12 @@ def LD_posterior(LD_s):
 
 class ranking(cpnest.model.Model):
 
-    def __init__(self, omega, z_bounds, catalog):
+    def __init__(self, omega, z_bounds, catalog, id):
         self.names=['zgw']
         self.bounds=[z_bounds]
         self.omega   = omega
         self.catalog = catalog
-
-    def GalInABox(self):
-        v = Vizier(columns = ['RAJ2000', 'DEJ2000', 'z', 'GWGC', 'Bmag', 'Jmag', 'Kmag', 'Hmag'])
-        center = SkyCoord(M.p_pos.means_[0][0], M.p_pos.means_[0][1], unit = (u.rad, u.rad))
-        raggio = np.sqrt(np.diag(M.p_pos.covariances_[0])).max()
-        table = v.query_region(center, radius = 5*raggio*u.rad, catalog = catalog) # width = width, height = height, catalog = catalog)
-        data  = pd.DataFrame()
-        # for tablei in table:
-        #     data = data.append(tablei.to_pandas(), ignore_index = True)
-        data = data.append(table[1].to_pandas())
-        return data.dropna(subset = ['RAJ2000', 'DEJ2000', 'z'])
-
+        self.detection_id = id
 
     def dropgal(self):
         for i in self.catalog.index:
@@ -147,7 +134,7 @@ class ranking(cpnest.model.Model):
         S = plt.scatter(self.catalog['RAJ2000'], self.catalog['DEJ2000'], c = self.catalog['p'], marker = '+')
         bar = plt.colorbar(S)
         bar.set_label('p')
-        plt.savefig('prob.pdf', bbox_inches = 'tight')
+        plt.savefig('prob'+self.detection_id+'.pdf', bbox_inches = 'tight')
 
         plt.figure(2)
         S = plt.scatter(self.catalog['RAJ2000'], self.catalog['DEJ2000'], c = self.catalog['ppos'], marker = '+')
@@ -155,14 +142,7 @@ class ranking(cpnest.model.Model):
         bar.set_label('p')
         plt.xlabel('ra')
         plt.ylabel('dec')
-        plt.savefig('positionsprob.pdf', bbox_inches = 'tight')
-
-        app = np.linspace(self.bounds[0][0],self.bounds[0][1], 1000)
-        plt.figure(3)
-        plt.plot(app, self.pdfz(app))
-        plt.xlabel('$z$')
-        plt.ylabel('$p(z)$')
-        plt.savefig('pdfz.pdf')
+        plt.savefig('positionsprob'+self.detection_id+'.pdf', bbox_inches = 'tight')
 
     def log_prior(self,x):
         if not(np.isfinite(super(ranking, self).log_prior(x))):
@@ -177,7 +157,7 @@ class ranking(cpnest.model.Model):
         logL = np.log(Lh.sum())
         return logL
 
-    def run(self, file, id, show_output = False, run_sampling = True):
+    def run(self, file, show_output = False, run_sampling = True):
 
         # posteriors GW calculation
         samples = get_samples(file = file)
@@ -185,7 +165,7 @@ class ranking(cpnest.model.Model):
         self.p_pos = pos_posterior(samples['ra'],samples['dec'], number = 1)
         probs = []
         for ra, dec in zip(self.catalog['RA'], self.catalog['Dec']):
-            probs.append(np.exp(self.p_pos.score_samples([[ra,dec]]))[0]) # si riesce ad ottimizzare?
+            probs.append(np.exp(self.p_pos.score_samples([[ra,dec]]))[0])
         self.catalog['ppos'] = np.array(probs)
         # Dropping galaxies outside the confident volume
         # Position
@@ -207,7 +187,7 @@ class ranking(cpnest.model.Model):
         prob = prob/prob.max()
         self.catalog['p'] = prob
         self.catalog = self.catalog.sort_values('p', ascending = False)
-        self.catalog.to_csv('rank'+str(id)+'.txt', header=True, index=None, sep='&', mode='w')
+        self.catalog.to_csv('rank'+self.detection_id+'.txt', header=True, index=None, sep='&', mode='w')
         if show_output:
             self.plot_outputs()
 
