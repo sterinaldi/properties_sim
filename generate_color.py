@@ -16,9 +16,15 @@ Please notice that the hosts are required to be the first nev entries of the cat
 def gaussian(x,x0,sigma):
     return np.exp(-(x-x0)**2/(2*sigma**2))/(sigma*np.sqrt(2*np.pi))
 
-data   = pd.read_csv('MDC1_universe.txt', sep = ' ')
-events = np.genfromtxt('2015_all_inj.txt', names = True)
-nev = events.shape[0]
+cat = open('catalog50k.txt', 'w')
+cat.write('evid\tra\tdec\tLD\tmag\n')
+
+events     = np.genfromtxt('2015_all_inj.txt', names = True)
+detections = np.genfromtxt('mdc_catalogs_gwcosmo_catalogs_mdc_counterparts.txt', names = True)
+
+det_ID = detections['simulation_ID']
+
+nev    = 250
 
 # Schechter parameters as in O2 H0 paper (from Gehrels et al. (2016))
 alpha   = -1.07
@@ -29,9 +35,8 @@ m_mean  = -20.
 m_sigma = 0.5
 
 # Draw nev luminosities for hosts (gaussian distributed)
-mag_hosts  = np.random.normal(m_mean, m_sigma, nev)
 
-mag_others = np.zeros(len(data)-nev)
+mag_others = np.zeros(len(events))
 # Draw other galaxies luminosity (Schechter function) with Von Neumann's accept-reject sampling method
 mag_bounds = [-17, -24]
 
@@ -49,10 +54,16 @@ for i in range(len(mag_others)):
             mag_others[i] = temp_mag
             flag = False
 
-magnitudes  = np.concatenate([mag_hosts, mag_others])
-data['mag'] = magnitudes
+magnitudes  = mag_others
 
-data.to_csv('m-catalog.txt', header=True, index=False, sep='\t')
+for index, id in zip(range(len(magnitudes)), events['simid']):
+    if id in det_ID:
+        magnitudes[index] = np.random.normal(m_mean, m_sigma, 1)
+
+
+for m, ra, dec, LD, id  in zip(magnitudes, events['RA'], events['DEC'], events['LD'], events['simid']):
+    cat.write('%f\t%f\t%f\t%f\t%f\n' %(id, ra, dec, LD, m))
+cat.close()
 
 # Optional: check the output distribution
 output = True
@@ -68,4 +79,4 @@ if(output):
         meanbin[i] = (mbin[i+1]+mbin[i])/2.
     plt.subplot(212)
     plt.plot(meanbin, count-Schechter(meanbin))
-    plt.savefig('magnitude_histogram.pdf')
+    plt.savefig('magnitude_histogram_50k.pdf')
